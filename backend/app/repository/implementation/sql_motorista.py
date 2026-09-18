@@ -14,7 +14,6 @@ class SqlAlchemyMotoristaRepository(MotoristaRepository):
 
     def create(self, motorista: MotoristaEntity) -> MotoristaEntity:
         model = MotoristaModel(
-            id=str(motorista.id),
             nome=motorista.nome,
             cnh=motorista.cnh,
             status=motorista.status,
@@ -27,3 +26,7 @@ class SqlAlchemyMotoristaRepository(MotoristaRepository):
     def list(self) -> Sequence[MotoristaEntity]:
         models = self.session.scalars(select(MotoristaModel)).all()
         return [MotoristaEntity.model_validate(model) for model in models]
+
+    def get_by_id(self, id: str) -> MotoristaEntity | None:
+        model = self.session.get(MotoristaModel, id)
+        return MotoristaEntity.model_validate(model) if model else None

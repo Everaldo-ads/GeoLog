@@ -19,11 +19,13 @@ def get_motorista_repository(
 
 def get_veiculo_repository(
     session: Annotated[Session, Depends(get_sql_session)],
+    motorista_repo: Annotated[SqlAlchemyMotoristaRepository, Depends(get_motorista_repository)],
 ) -> SqlAlchemyVeiculoRepository:
-    return SqlAlchemyVeiculoRepository(session)
+    return SqlAlchemyVeiculoRepository(session, motorista_repo)
 
 
 def get_telemetria_repository(
     collection: Annotated[Collection, Depends(get_telemetria_collection)],
+    veiculo_repo: Annotated[SqlAlchemyVeiculoRepository, Depends(get_veiculo_repository)],
 ) -> MongoTelemetriaRepository:
-    return MongoTelemetriaRepository(collection)
+    return MongoTelemetriaRepository(collection, veiculo_repo)
