@@ -18,7 +18,7 @@ class SqlAlchemyVeiculoRepository(VeiculoRepository):
         model = VeiculoModel(
             placa=veiculo.placa,
             modelo=veiculo.modelo,
-            motorista_id=str(veiculo.motorista.id),
+            motorista_id=int(veiculo.motorista.id) if veiculo.motorista and veiculo.motorista.id is not None else None,
         )
         self.session.add(model)
         self.session.commit()
@@ -46,7 +46,7 @@ class SqlAlchemyVeiculoRepository(VeiculoRepository):
             results.append(VeiculoEntity.model_validate(data))
         return results
 
-    def get_by_id(self, id: str) -> VeiculoEntity | None:
+    def get_by_id(self, id: int) -> VeiculoEntity | None:
         model = self.session.get(VeiculoModel, id)
         if not model:
             return None
@@ -59,7 +59,7 @@ class SqlAlchemyVeiculoRepository(VeiculoRepository):
         }
         return VeiculoEntity.model_validate(data)
 
-    def list_by_motorista(self, motorista_id: str) -> Sequence[VeiculoEntity]:
+    def list_by_motorista(self, motorista_id: int) -> Sequence[VeiculoEntity]:
         models = (
             self.session.scalars(
                 select(VeiculoModel).where(VeiculoModel.motorista_id == motorista_id)

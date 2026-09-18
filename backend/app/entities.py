@@ -1,11 +1,11 @@
-from uuid import UUID, uuid4
 from typing import Literal
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class MotoristaEntity(BaseModel):
-    id: UUID | None = Field(default=None)
+    id: int | None = Field(default=None)
     nome: str = Field(min_length=1)
     cnh: str = Field(min_length=1)
     status: str = Field(min_length=1)
@@ -14,7 +14,7 @@ class MotoristaEntity(BaseModel):
 
 
 class VeiculoEntity(BaseModel):
-    id: UUID | None = Field(default=None)
+    id: int | None = Field(default=None)
     placa: str = Field(min_length=1)
     modelo: str = Field(min_length=1)
     motorista: MotoristaEntity
@@ -30,11 +30,12 @@ class GeoJSONPoint(BaseModel):
 
 
 class TelemetriaEntity(BaseModel):
-    id: UUID | None = Field(default=None)
+    id: int | None = Field(default=None)
     location: GeoJSONPoint
     temperatura: float
     velocidade: float = Field(ge=0)
     veiculo: VeiculoEntity
+    timestamp: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -27,6 +27,6 @@ class SqlAlchemyMotoristaRepository(MotoristaRepository):
         models = self.session.scalars(select(MotoristaModel)).all()
         return [MotoristaEntity.model_validate(model) for model in models]
 
-    def get_by_id(self, id: str) -> MotoristaEntity | None:
+    def get_by_id(self, id: int) -> MotoristaEntity | None:
         model = self.session.get(MotoristaModel, id)
         return MotoristaEntity.model_validate(model) if model else None
