@@ -1,5 +1,4 @@
 import os
-from collections.abc import Generator
 
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
@@ -26,11 +25,7 @@ def initialize_sql() -> Engine:
     return engine
 
 
-def get_sql_session() -> Generator[Session, None, None]:
+def create_session() -> Session:
     if SessionLocal is None:
         raise RuntimeError("SQL database has not been initialized")
-    session = SessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
+    return SessionLocal()

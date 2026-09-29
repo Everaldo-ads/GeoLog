@@ -1,11 +1,12 @@
 import os
 import time
+from datetime import datetime
 from pathlib import Path
 
 from pymongo.errors import PyMongoError
 
 from app.database.sql import initialize_sql, SessionLocal, Base
-from app.database.mongo import initialize_mongo, mongo_database
+from app.database import mongo
 from app.models import MotoristaModel, VeiculoModel
 
 # try to load .env if present
@@ -35,21 +36,21 @@ TELEMETRIA_SEED = [
         "location": {"type": "Point", "coordinates": [-34.873, -7.115]},
         "temperatura": 4.2,
         "velocidade": 65,
-        "timestamp": "2026-09-11T10:00:00Z",
+        "timestamp": datetime.fromisoformat("2026-09-11T10:00:00+00:00"),
     },
     {
         "veiculo_id": 102,
         "location": {"type": "Point", "coordinates": [-34.832, -7.121]},
         "temperatura": -18.5,
         "velocidade": 85,
-        "timestamp": "2026-09-11T10:05:00Z",
+        "timestamp": datetime.fromisoformat("2026-09-11T10:05:00+00:00"),
     },
     {
         "veiculo_id": 103,
         "location": {"type": "Point", "coordinates": [-34.95, -7.15]},
         "temperatura": 22.0,
         "velocidade": 0,
-        "timestamp": "2026-09-11T09:45:00Z",
+        "timestamp": datetime.fromisoformat("2026-09-11T09:45:00+00:00"),
     },
 ]
 
@@ -87,11 +88,11 @@ def seed_sql():
 
 
 def seed_mongo(retries: int = 5, delay: int = 2):
-    initialize_mongo()
-    if mongo_database is None:
+    mongo.initialize_mongo()
+    if mongo.mongo_database is None:
         raise RuntimeError("MongoDB not initialized")
 
-    collection = mongo_database["telemetrias"]
+    collection = mongo.mongo_database["telemetrias"]
     collection.delete_many({})
 
     docs = []

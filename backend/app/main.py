@@ -4,8 +4,12 @@ from fastapi import FastAPI
 from . import models
 from .database.mongo import initialize_mongo
 from .database.sql import Base, initialize_sql
+from .routers import motoristas, telemetrias, veiculos
 
 app = FastAPI(title="GeoLog API", version="0.1.0")
+app.include_router(motoristas.router)
+app.include_router(veiculos.router)
+app.include_router(telemetrias.router)
 
 
 @app.on_event("startup")
