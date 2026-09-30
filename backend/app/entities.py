@@ -1,7 +1,8 @@
-from typing import Literal
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from .types import Location
 
 
 class MotoristaEntity(BaseModel):
@@ -22,16 +23,9 @@ class VeiculoEntity(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class GeoJSONPoint(BaseModel):
-    type: Literal["Point"] = "Point"
-    coordinates: tuple[float, float]
-    
-    model_config = ConfigDict(from_attributes=True)
-
-
 class TelemetriaEntity(BaseModel):
     id: int | None = Field(default=None)
-    location: GeoJSONPoint
+    location: Location
     temperatura: float
     velocidade: float = Field(ge=0)
     veiculo: VeiculoEntity

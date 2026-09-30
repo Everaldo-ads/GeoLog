@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Query, status
+from typing import Annotated
 
 from ..controllers.veiculo import VeiculoController
 from ..entities import TelemetriaEntity, VeiculoEntity
@@ -7,6 +8,8 @@ from ..repository.implementation.sql_veiculo import SqlAlchemyVeiculoRepository
 from ..repository.implementation.mongo_telemetria import MongoTelemetriaRepository
 from ..repository.interfaces.telemetria import TelemetriaRepository
 from ..repository.interfaces.veiculo import VeiculoRepository
+from ..http.request.veiculo import VeiculoProximoRequest
+from ..services.veiculo import VeiculoService
 
 
 router = APIRouter(prefix="/api/v1/veiculos", tags=["veiculos"])
@@ -17,7 +20,8 @@ veiculo_repository: VeiculoRepository = SqlAlchemyVeiculoRepository(
 telemetria_repository: TelemetriaRepository = MongoTelemetriaRepository(
     veiculo_repository
 )
-veiculo_controller = VeiculoController(veiculo_repository, telemetria_repository)
+veiculo_service = VeiculoService(veiculo_repository, telemetria_repository)
+veiculo_controller = VeiculoController(veiculo_service)
 
 
 @router.post("", response_model=VeiculoEntity, status_code=status.HTTP_201_CREATED)
@@ -37,11 +41,13 @@ def list_veiculos_by_motorista(motorista_id: int) -> list[VeiculoEntity]:
 
 @router.get("/proximos", response_model=list[TelemetriaEntity])
 def list_veiculos_proximos(
-    longitude: float = Query(ge=-180, le=180),
-    latitude: float = Query(ge=-90, le=90),
-    raio_km: float = Query(gt=0),
+    veiculo_proximo: Annotated[VeiculoProximoRequest, Query()]
 ) -> list[TelemetriaEntity]:
-    return list(veiculo_controller.list_nearby(longitude, latitude, raio_km))
+    return list(veiculo_controller.list_nearby(
+        veiculo_proximo.longitude,
+        veiculo_proximo.latitude,
+        veiculo_proximo.raio
+    ))
 
 
 @router.get("/{veiculo_id}", response_model=VeiculoEntity)

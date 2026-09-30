@@ -23,8 +23,11 @@ class MongoTelemetriaRepository(TelemetriaRepository):
         # remove entity id (Mongo uses its own _id)
         doc.pop("id", None)
         doc["location"] = {
-            "type": telemetria.location.type,
-            "coordinates": list(telemetria.location.coordinates),
+            "type": "Point",
+            "coordinates": [
+                telemetria.location.longitude,
+                telemetria.location.latitude,
+            ],
         }
         # store only veiculo_id in the collection
         veiculo = doc.pop("veiculo")
@@ -40,6 +43,11 @@ class MongoTelemetriaRepository(TelemetriaRepository):
         veiculo = self.veiculo_repository.get_by_id(veiculo_id)
         if veiculo is None:
             return None
+        longitude, latitude = document["location"]["coordinates"]
+        document["location"] = {
+            "latitude": latitude,
+            "longitude": longitude,
+        }
         document["veiculo"] = veiculo.model_dump(mode="json")
         return TelemetriaEntity.model_validate(document)
 

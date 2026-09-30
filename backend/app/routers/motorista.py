@@ -3,12 +3,13 @@ from fastapi import APIRouter, status
 from ..controllers.motorista import MotoristaController
 from ..entities import MotoristaEntity
 from ..repository.implementation.sql_motorista import SqlAlchemyMotoristaRepository
-from ..repository.interfaces.motorista import MotoristaRepository
+from ..services.motorista import MotoristaService
 
 
 router = APIRouter(prefix="/api/v1/motoristas", tags=["motoristas"])
-motorista_repository: MotoristaRepository = SqlAlchemyMotoristaRepository()
-motorista_controller = MotoristaController(motorista_repository)
+motorista_repository = SqlAlchemyMotoristaRepository()
+motorista_service = MotoristaService(motorista_repository)
+motorista_controller = MotoristaController(motorista_service)
 
 
 @router.post("", response_model=MotoristaEntity, status_code=status.HTTP_201_CREATED)
