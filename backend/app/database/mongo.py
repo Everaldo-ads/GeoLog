@@ -9,7 +9,7 @@ mongo_database = None
 
 def initialize_mongo() -> None:
     global mongo_client, mongo_database
-    mongodb_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017/geolog")
+    mongodb_uri = os.getenv("MONGODB_URI", "mongodb://geolog-mongodb:27017/geolog")
     mongo_client = MongoClient(mongodb_uri)
     mongo_database = mongo_client.get_default_database()
     telemetrias = mongo_database["telemetrias"]

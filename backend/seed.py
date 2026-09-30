@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pymongo.errors import PyMongoError
 
-from app.database.sql import initialize_sql, SessionLocal, Base
+from app.database.sql import initialize_sql, create_session, Base
 from app.database import mongo
 from app.models import MotoristaModel, VeiculoModel
 
@@ -60,11 +60,7 @@ def seed_sql():
     # create tables
     Base.metadata.create_all(engine)
 
-    Session = SessionLocal
-    if Session is None:
-        raise RuntimeError("SessionLocal not initialized")
-
-    session = Session()
+    session = create_session()
     try:
         # clear existing
         session.query(MotoristaModel).delete()

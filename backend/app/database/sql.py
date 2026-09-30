@@ -26,6 +26,6 @@ def initialize_sql() -> Engine:
 
 
 def create_session() -> Session:
-    if SessionLocal is None:
+    if engine is None:
         raise RuntimeError("SQL database has not been initialized")
-    return SessionLocal()
+    return Session(engine)
