@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from fastapi import WebSocket
+from dataclasses import dataclass
 
 
 class Location(BaseModel):
@@ -7,7 +8,8 @@ class Location(BaseModel):
     longitude: float
 
 
-class GeoLocationWebSocketSession(BaseModel):
+@dataclass
+class GeoLocationWebSocketSession:
+    raio: float|None
     websocket: WebSocket
     location: Location | None = None
-    raio: float|None
