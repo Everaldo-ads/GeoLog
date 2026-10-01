@@ -8,7 +8,7 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_DATABASE: geolog
+      MONGO_INITDB_DATABASE: ${MONGO_DB}
     volumes:
       - mongodb_data:/data/db
 
@@ -22,8 +22,11 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    env_file:
+      - ./backend/.env
     environment:
-      MONGODB_URI: mongodb://mongodb:27017/geolog
+      DATABASE_URL: ${DATABASE_URL}
+      MONGODB_URI: "mongodb://${MONGO_HOST}:${MONGO_PORT}/${MONGO_DB}"
     volumes:
       - ./backend:/app
 
@@ -37,6 +40,8 @@ services:
     restart: unless-stopped
     ports:
       - "5173:5173"
+    env_file:
+      - ./frotend/.env
     environment:
       VITE_API_URL: http://localhost:8000
     volumes:

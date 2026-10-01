@@ -1,0 +1,1 @@
+"""Repository interfaces grouped by entity."""
