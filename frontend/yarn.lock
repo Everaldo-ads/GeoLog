@@ -609,6 +609,10 @@ react-dom@^19.2.8:
   dependencies:
     scheduler "^0.28.0"
 
+react-is@^19.3.0:
+  version "19.3.0"
+  resolved "https://registry.yarnpkg.com/react-is/-/react-is-19.3.0.tgz#716028d67e9993d23a2d353c6d08a3c1ef2bbeb4"
+
 react-leaflet@^5.0.0:
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/react-leaflet/-/react-leaflet-5.0.0.tgz#945d40bad13b69e8606278b19446b00bab57376a"

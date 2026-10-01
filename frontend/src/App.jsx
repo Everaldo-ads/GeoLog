@@ -1,35 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Circle, Popup, useMap } from 'react-leaflet'
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
 import 'leaflet/dist/leaflet.css'
 import './App.css'
+import { useGeoLog, toMs } from './hooks/useGeoLog'
 
-/* ----------------------------------------------------------------------------------- */
-/* DADOS FAKE. Depois serão trocados por chamadas à API do backend com axios.get(...)  */
-/* ----------------------------------------------------------------------------------- */
-const MOTORISTAS = [
-  { id: 1, nome: 'Carlos Andrade', cnh: '123456789', status: 'Ativo' },
-  { id: 2, nome: 'Mariana Silva', cnh: '987654321', status: 'Ativo' },
-  { id: 3, nome: 'Roberto Souza', cnh: '456789123', status: 'Em Descanso' },
-]
-
-const VEICULOS = [
-  { id: 101, placa: 'ABC-1A23', modelo: 'Volvo FH 540', motorista_id: 1 },
-  { id: 102, placa: 'XYZ-9876', modelo: 'Scania R450', motorista_id: 2 },
-  { id: 103, placa: 'KGB-4567', modelo: 'Mercedes Actros', motorista_id: 3 },
-]
-
-// ATENÇÃO: no GeoJSON a ordem é [longitude, latitude].
-// O Leaflet usa o contrário: [latitude, longitude]. Por isso convertemos abaixo.
-const TELEMETRIA = [
-  { veiculo_id: 101, coordinates: [-34.873, -7.115], temperatura: 4.2, velocidade: 65, timestamp: '2026-09-11T10:00:00Z' },
-  { veiculo_id: 102, coordinates: [-34.832, -7.121], temperatura: -18.5, velocidade: 85, timestamp: '2026-09-11T10:05:00Z' },
-  { veiculo_id: 103, coordinates: [-34.95, -7.15], temperatura: 22.0, velocidade: 0, timestamp: '2026-09-11T09:45:00Z' },
-]
-
+// Pontos de referência para a busca por raio (o usuário escolhe um deles).
 const PONTOS_REFERENCIA = [
   { nome: 'Centro (João Pessoa)', lat: -7.115, lng: -34.873 },
   { nome: 'Cabo Branco', lat: -7.121, lng: -34.832 },
@@ -38,10 +17,10 @@ const PONTOS_REFERENCIA = [
 
 const LIMITE_VELOCIDADE = 80
 const CORES_STATUS = { Ativo: '#16a34a', 'Em Descanso': '#f59e0b' }
+const CORES_LINHAS = ['#2563eb', '#dc2626', '#16a34a', '#f59e0b', '#7c3aed', '#0891b2']
 
-/* Distância em km entre dois pontos (fórmula de Haversine).
-   Por enquanto o cálculo é feito aqui; no projeto final quem filtra
-   é o MongoDB com $near / $geoWithin. */
+/* Distância em km (Haversine). Usada SÓ para mostrar "a X km" no popup.
+   Quem decide quais veículos estão dentro do raio é o MongoDB ($geoNear). */
 function distanciaKm(lat1, lng1, lat2, lng2) {
   const R = 6371
   const rad = (g) => (g * Math.PI) / 180
@@ -53,61 +32,81 @@ function distanciaKm(lat1, lng1, lat2, lng2) {
   return 2 * R * Math.asin(Math.sqrt(a))
 }
 
-// Faz o mapa "voar" para o novo ponto quando o usuário troca a referência.
-function Recentralizar({ centro }) {
+const formatarHora = (ts) =>
+  new Date(toMs(ts)).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+  })
+
+// Recentraliza o mapa quando o usuário troca a referência.
+// (Recebe lat/lng separados: um array novo a cada render faria o mapa "pular" sozinho.)
+function Recentralizar({ lat, lng }) {
   const map = useMap()
   useEffect(() => {
-    map.setView(centro)
-  }, [centro, map])
+    map.setView([lat, lng])
+  }, [lat, lng, map])
   return null
 }
 
 export default function App() {
   const [refIndex, setRefIndex] = useState(0)
   const [raioKm, setRaioKm] = useState(10)
+  const [auto, setAuto] = useState(false)
 
   const referencia = PONTOS_REFERENCIA[refIndex]
   const centro = [referencia.lat, referencia.lng]
 
-  // "Join poliglota em memória": junta SQLite (motorista, veículo) + MongoDB (telemetria)
-  const frota = useMemo(() => {
-    return TELEMETRIA.map((t) => {
-      const veiculo = VEICULOS.find((v) => v.id === t.veiculo_id)
-      const motorista = MOTORISTAS.find((m) => m.id === veiculo?.motorista_id)
-      const [lng, lat] = t.coordinates
-      return {
-        veiculo_id: t.veiculo_id,
-        motorista: motorista?.nome ?? '—',
-        status: motorista?.status ?? '—',
-        placa: veiculo?.placa ?? '—',
-        modelo: veiculo?.modelo ?? '—',
-        temperatura: t.temperatura,
-        velocidade: t.velocidade,
-        lat,
-        lng,
-        distancia: distanciaKm(referencia.lat, referencia.lng, lat, lng),
-      }
-    })
-  }, [referencia])
+  const {
+    motoristas, telemetrias, frota, idsNoRaio,
+    aoVivo, carregando, erro, simularMovimentacao,
+  } = useGeoLog(referencia, raioKm)
 
-  const dentroDoRaio = frota.filter((v) => v.distancia <= raioKm)
+  // Simulação automática (a cada 3 s) enquanto o checkbox estiver marcado.
+  useEffect(() => {
+    if (!auto) return
+    const id = setInterval(simularMovimentacao, 3000)
+    return () => clearInterval(id)
+  }, [auto, simularMovimentacao])
+
+  const dentroDoRaio = frota.filter((v) => idsNoRaio.has(v.veiculo_id))
 
   // KPIs
   const frotasAtivas = frota.filter((v) => v.status === 'Ativo').length
-  const mediaTemp = frota.reduce((soma, v) => soma + v.temperatura, 0) / frota.length
+  const mediaTemp = frota.length
+    ? frota.reduce((soma, v) => soma + v.temperatura, 0) / frota.length
+    : 0
   const alertas = frota.filter((v) => v.velocidade > LIMITE_VELOCIDADE).length
 
-  // Gráfico de pizza: distribuição do status dos motoristas
+  // Pizza: distribuição do status dos motoristas
   const dadosStatus = Object.entries(
-    MOTORISTAS.reduce((acc, m) => ({ ...acc, [m.status]: (acc[m.status] ?? 0) + 1 }), {}),
+    motoristas.reduce((acc, m) => ({ ...acc, [m.status]: (acc[m.status] ?? 0) + 1 }), {}),
   ).map(([name, value]) => ({ name, value }))
+
+  // Linhas: histórico de temperatura por veículo (uma linha por placa, em ordem de tempo)
+  const placas = useMemo(() => [...new Set(frota.map((v) => v.placa))], [frota])
+  const historicoTemp = useMemo(
+    () =>
+      telemetrias
+        .filter((t) => t.timestamp)
+        .sort((a, b) => toMs(a.timestamp) - toMs(b.timestamp))
+        .map((t) => ({ hora: formatarHora(t.timestamp), [t.veiculo.placa]: t.temperatura })),
+    [telemetrias],
+  )
+
+  if (carregando) return <div className="app"><p>Carregando dados da frota…</p></div>
 
   return (
     <div className="app">
       <header>
         <h1>GeoLog · LogiTech Express</h1>
-        <p>Monitoramento de frota em tempo real</p>
+        <p>
+          Monitoramento de frota em tempo real{' '}
+          <span className={`badge ${aoVivo ? 'on' : 'off'}`}>
+            {aoVivo ? '● ao vivo' : '○ desconectado'}
+          </span>
+        </p>
       </header>
+
+      {erro && <div className="erro">{erro}</div>}
 
       {/* KPIs */}
       <section className="kpis">
@@ -123,6 +122,15 @@ export default function App() {
           <span>Alertas de velocidade (&gt; {LIMITE_VELOCIDADE} km/h)</span>
           <strong>{alertas}</strong>
         </div>
+      </section>
+
+      {/* Simulador (bônus) */}
+      <section className="card simulador">
+        <button onClick={simularMovimentacao}>Simular Movimentação</button>
+        <label>
+          <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
+          Automático (a cada 3 s)
+        </label>
       </section>
 
       {/* Busca por raio + mapa */}
@@ -150,7 +158,7 @@ export default function App() {
         </p>
 
         <MapContainer center={centro} zoom={11} className="mapa">
-          <Recentralizar centro={centro} />
+          <Recentralizar lat={referencia.lat} lng={referencia.lng} />
           <TileLayer
             attribution="&copy; OpenStreetMap"
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -160,7 +168,7 @@ export default function App() {
             <Popup>Referência: {referencia.nome}</Popup>
           </CircleMarker>
           {frota.map((v) => {
-            const dentro = v.distancia <= raioKm
+            const dentro = idsNoRaio.has(v.veiculo_id)
             return (
               <CircleMarker
                 key={v.veiculo_id}
@@ -176,7 +184,7 @@ export default function App() {
                   <b>{v.placa}</b> · {v.modelo}<br />
                   Motorista: {v.motorista}<br />
                   Temp: {v.temperatura} °C · {v.velocidade} km/h<br />
-                  A {v.distancia.toFixed(1)} km da referência
+                  A {distanciaKm(referencia.lat, referencia.lng, v.lat, v.lng).toFixed(1)} km da referência
                 </Popup>
               </CircleMarker>
             )
@@ -215,15 +223,22 @@ export default function App() {
       {/* Gráficos */}
       <section className="graficos">
         <div className="card">
-          <h2>Temperatura por veículo</h2>
+          <h2>Histórico de temperatura por veículo</h2>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={frota}>
+            <LineChart data={historicoTemp}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="placa" />
+              <XAxis dataKey="hora" tick={{ fontSize: 11 }} />
               <YAxis unit="°C" />
               <Tooltip />
-              <Bar dataKey="temperatura" fill="#2563eb" />
-            </BarChart>
+              <Legend />
+              {placas.map((placa, i) => (
+                <Line
+                  key={placa} type="monotone" dataKey={placa}
+                  stroke={CORES_LINHAS[i % CORES_LINHAS.length]}
+                  connectNulls dot isAnimationActive={false}
+                />
+              ))}
+            </LineChart>
           </ResponsiveContainer>
         </div>
         <div className="card">
