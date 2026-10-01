@@ -8,7 +8,7 @@ from ..repository.implementation.sql_veiculo import SqlAlchemyVeiculoRepository
 from ..repository.implementation.mongo_telemetria import MongoTelemetriaRepository
 from ..repository.interfaces.telemetria import TelemetriaRepository
 from ..repository.interfaces.veiculo import VeiculoRepository
-from ..http.request.veiculo import VeiculoCreateRequest, VeiculoProximoRequest
+from ..http.request.veiculo import VeiculoCreateRequest, VeiculoProximoParams
 from ..services.veiculo import VeiculoService
 
 
@@ -44,13 +44,9 @@ def list_veiculos_by_motorista(motorista_id: int) -> list[VeiculoEntity]:
 
 @router.get("/proximos", response_model=list[TelemetriaEntity])
 def list_veiculos_proximos(
-    veiculo_proximo: Annotated[VeiculoProximoRequest, Query()]
+    veiculo_proximo: Annotated[VeiculoProximoParams, Query()]
 ) -> list[TelemetriaEntity]:
-    return list(veiculo_controller.list_nearby(
-        veiculo_proximo.longitude,
-        veiculo_proximo.latitude,
-        veiculo_proximo.raio
-    ))
+    return list(veiculo_controller.list_nearby(veiculo_proximo))
 
 
 @router.get("/{veiculo_id}", response_model=VeiculoEntity)

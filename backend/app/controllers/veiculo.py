@@ -3,9 +3,11 @@ from collections.abc import Sequence
 from fastapi import HTTPException, status
 
 from ..entities import TelemetriaEntity, VeiculoEntity
-from ..http.request.veiculo import VeiculoCreateRequest
+from ..http.request.veiculo import VeiculoCreateRequest, VeiculoProximoParams
 from ..repository.interfaces.motorista import MotoristaRepository
+from ..services.telemetria import conexoes
 from ..services.veiculo import VeiculoService
+from ..types import Location
 
 
 class VeiculoController:
@@ -39,14 +41,23 @@ class VeiculoController:
 
     def list_nearby(
         self,
-        longitude: float,
-        latitude: float,
-        radius_km: float,
+        params: VeiculoProximoParams,
     ) -> Sequence[TelemetriaEntity]:
+        session = conexoes.get(params.socket_id)
+        if session is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conexão WebSocket não encontrada",
+            )
+        session.location = Location(
+            latitude=params.latitude,
+            longitude=params.longitude,
+        )
+        session.raio = params.raio
         return self.service.list_nearby(
-            longitude,
-            latitude,
-            radius_km,
+            params.longitude,
+            params.latitude,
+            params.raio,
         )
 
     def get_by_id(self, veiculo_id: int) -> VeiculoEntity:
