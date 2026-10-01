@@ -30,7 +30,7 @@ class TelemetriaService:
                     session.location, 
                     session.raio
                 ):
-                    mensagem = telemetria.model_dump()
+                    mensagem = telemetria.model_dump(mode="json")
                     await session.websocket.send_json(mensagem)
 
     def is_nearby(self, telemetria: TelemetriaEntity, location: Location, raio: float) -> bool:
