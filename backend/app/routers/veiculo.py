@@ -8,7 +8,7 @@ from ..repository.implementation.sql_veiculo import SqlAlchemyVeiculoRepository
 from ..repository.implementation.mongo_telemetria import MongoTelemetriaRepository
 from ..repository.interfaces.telemetria import TelemetriaRepository
 from ..repository.interfaces.veiculo import VeiculoRepository
-from ..http.request.veiculo import VeiculoProximoRequest
+from ..http.request.veiculo import VeiculoCreateRequest, VeiculoProximoRequest
 from ..services.veiculo import VeiculoService
 
 
@@ -21,12 +21,15 @@ telemetria_repository: TelemetriaRepository = MongoTelemetriaRepository(
     veiculo_repository
 )
 veiculo_service = VeiculoService(veiculo_repository, telemetria_repository)
-veiculo_controller = VeiculoController(veiculo_service)
+veiculo_controller = VeiculoController(
+    veiculo_service,
+    motorista_repository,
+)
 
 
 @router.post("", response_model=VeiculoEntity, status_code=status.HTTP_201_CREATED)
-def create_veiculo(veiculo: VeiculoEntity) -> VeiculoEntity:
-    return veiculo_controller.create(veiculo)
+def create_veiculo(request: VeiculoCreateRequest) -> VeiculoEntity:
+    return veiculo_controller.create(request)
 
 
 @router.get("", response_model=list[VeiculoEntity])

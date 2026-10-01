@@ -3,14 +3,32 @@ from collections.abc import Sequence
 from fastapi import HTTPException, status
 
 from ..entities import TelemetriaEntity, VeiculoEntity
+from ..http.request.veiculo import VeiculoCreateRequest
+from ..repository.interfaces.motorista import MotoristaRepository
 from ..services.veiculo import VeiculoService
 
 
 class VeiculoController:
-    def __init__(self, service: VeiculoService) -> None:
+    def __init__(
+        self,
+        service: VeiculoService,
+        motorista_repository: MotoristaRepository,
+    ) -> None:
         self.service = service
+        self.motorista_repository = motorista_repository
 
-    def create(self, veiculo: VeiculoEntity) -> VeiculoEntity:
+    def create(self, request: VeiculoCreateRequest) -> VeiculoEntity:
+        motorista = self.motorista_repository.get_by_id(request.motorista_id)
+        if motorista is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Motorista não encontrado",
+            )
+        veiculo = VeiculoEntity(
+            placa=request.placa,
+            modelo=request.modelo,
+            motorista=motorista,
+        )
         return self.service.create(veiculo)
 
     def list(self) -> Sequence[VeiculoEntity]:

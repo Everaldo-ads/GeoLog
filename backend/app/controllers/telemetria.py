@@ -9,20 +9,40 @@ from fastapi import (
 )
 
 from ..entities import TelemetriaEntity
+from ..http.request.telemetria import TelemetriaCreateRequest
+from ..repository.interfaces.veiculo import VeiculoRepository
 from ..services.telemetria import TelemetriaService, conexoes
 
 from ..types import GeoLocationWebSocketSession
 
 
 class TelemetriaController:
-    def __init__(self, service: TelemetriaService) -> None:
+    def __init__(
+        self,
+        service: TelemetriaService,
+        veiculo_repository: VeiculoRepository,
+    ) -> None:
         self.service = service
+        self.veiculo_repository = veiculo_repository
 
     def create(
             self, 
-            telemetria: TelemetriaEntity, 
+            request: TelemetriaCreateRequest,
             background_tasks: BackgroundTasks
         ) -> TelemetriaEntity:
+        veiculo = self.veiculo_repository.get_by_id(request.veiculo_id)
+        if veiculo is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Veículo não encontrado",
+            )
+        telemetria = TelemetriaEntity(
+            location=request.location,
+            temperatura=request.temperatura,
+            velocidade=request.velocidade,
+            veiculo=veiculo,
+            timestamp=request.timestamp,
+        )
         telemetria = self.service.create(telemetria)
         background_tasks.add_task(
             self.service.distribute_telemetry, 
